@@ -37,6 +37,7 @@ int main(int argc, char **argv) {
 	time_t requestedtime = atoi(argv[1]);
 	time_t starttime = time(NULL);
 
+	if (requestedtime < 0) requestedtime = 0;
 	printf("Searching for yggdrasil keys (this will take %ld-%ld seconds)\n", requestedtime, requestedtime + 5);
 
 	/* generate curve25519 secret key */
@@ -59,48 +60,27 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	int ones_max = 0;
-	int ones_current = 0;
 	unsigned char bestsecret[32];
 	unsigned char bestpub[32];
+	unsigned char besthash[64] = {0};
 	unsigned char myhash[64];
 
-	memcpy(bestsecret, mysecret, 32);
-	memcpy(bestpub, mypub, 32);
-
+	goto beginloop;
 	while (time(NULL) - starttime < requestedtime) {
 		/* hash, compare, increment secret, generate pubkey.
 		 * this loop should take 4 seconds on modern hardware */
+		beginloop:
 		for (int i = 0; i < (1 << 16); ++i) {
 			crypto_hash_sha512(myhash, mypub, 32);
 
-			/* count number of leading ones */
-			ones_current = 0;
-			for (int j = 0; j < 64; ++j) {
-				unsigned char b = myhash[j];
-				for (int k = 0; k < 8; ++k) {
-					if (b & 128) {
-						b <<= 1;
-						++ones_current;
-					} else {
-						goto check;
-					}
-				}
-			}
-
-			check:
-			if (ones_current > ones_max) {
-				ones_max = ones_current;
+			/* update bestkey if new hash is larger (has more ones) */
+			if (memcmp(myhash, besthash, 64) > 0) {
 				memcpy(bestpub, mypub, 32);
 				memcpy(bestsecret, mysecret, 32);
+				memcpy(besthash, myhash, 64);
 			}
-		
 
-			for (int j = 1; j < 31; ++j) {
-				if (++mysecret[j]) {
-					break;
-				}
-			}
+			for (int j = 1; j < 31; ++j) if (++mysecret[j]) break;
 
 			if (crypto_scalarmult_curve25519(mypub, mysecret, basepoint) != 0) {
 				printf("scalarmult to create pub failed!\n");
@@ -119,14 +99,25 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	unsigned char besthash[64];
-	crypto_hash_sha512(besthash, bestpub, 32);
+	/* count leading ones */
+	int ones_max = 0;
+	int mask;
+	unsigned char c;
+	for (int i = 0; i < 64; ++i) {
+		mask = 128;
+		c = besthash[i];
+		while (mask) {
+			if (c & mask) ++ones_max;
+			else goto endcount;
+			mask >>= 1;
+		}
+	}
+	endcount: ;
 
 	unsigned char addr[16];
 	addr[0] = 2;
 	addr[1] = ones_max;
 
-	unsigned char c;
 	int offset = ones_max;
 	for (int i = 0; i < 14; ++i) {
 		c = besthash[offset/8] << (offset%8);
