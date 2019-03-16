@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
 	addr[0] = 2;
 	addr[1] = ones_max;
 
-	int offset = ones_max;
+	int offset = ones_max + 1;
 	for (int i = 0; i < 14; ++i) {
 		c = besthash[offset/8] << (offset%8);
 		c |= besthash[offset/8 + 1] >> (8 - offset%8);
