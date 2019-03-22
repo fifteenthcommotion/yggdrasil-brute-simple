@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
 		 * this loop should take 4 seconds on modern hardware */
 		beginloop:
 		for (i = 0; i < (1 << 17); ++i) {
-			
+
 			crypto_hash_sha512(sk, seed, 32);
 
 			if (crypto_scalarmult_ed25519_base(pk, sk) != 0) {
