@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 	time_t starttime = time(NULL);
 
 	if (requestedtime < 0) requestedtime = 0;
-	printf("Searching for yggdrasil keys (this will take %ld-%ld seconds)\n", requestedtime, requestedtime + 5);
+	printf("Searching for yggdrasil keys (this will take slightly longer than %ld seconds)\n", requestedtime);
 
 	/* generate curve25519 secret key */
 	unsigned char mysecret[32];
@@ -47,15 +47,9 @@ int main(int argc, char **argv) {
 	mysecret[31] &= 127;
 	mysecret[31] |= 64;
 
-	unsigned char basepoint[32] = {9}; // 9 followed by zeroes
-	if (basepoint[0] != 9 || basepoint[1] != 0) {
-		printf("basepoint creation failed!\n");
-		return 1;
-	}
-
 	/* generate curve25519 public key */
 	unsigned char mypub[32];
-	if (crypto_scalarmult_curve25519(mypub, mysecret, basepoint) != 0) {
+	if (crypto_scalarmult_curve25519_base(mypub, mysecret) != 0) {
 		printf("scalarmult to create initial pub failed!\n");
 		return 1;
 	}
@@ -70,7 +64,7 @@ int main(int argc, char **argv) {
 		/* hash, compare, increment secret, generate pubkey.
 		 * this loop should take 4 seconds on modern hardware */
 		beginloop:
-		for (int i = 0; i < (1 << 16); ++i) {
+		for (int i = 0; i < (1 << 17); ++i) {
 			crypto_hash_sha512(myhash, mypub, 32);
 
 			/* update bestkey if new hash is larger (has more ones) */
@@ -82,7 +76,7 @@ int main(int argc, char **argv) {
 
 			for (int j = 1; j < 31; ++j) if (++mysecret[j]) break;
 
-			if (crypto_scalarmult_curve25519(mypub, mysecret, basepoint) != 0) {
+			if (crypto_scalarmult_curve25519_base(mypub, mysecret)  != 0) {
 				printf("scalarmult to create pub failed!\n");
 				return 1;
 			}
@@ -90,7 +84,7 @@ int main(int argc, char **argv) {
 	}
 
 	unsigned char validatepub[32];
-	if (crypto_scalarmult_curve25519(validatepub, bestsecret, basepoint) != 0) {
+	if (crypto_scalarmult_curve25519_base(validatepub, bestsecret) != 0) {
 		printf("scalarmult to validate public key failed!\n");
 		return 1;
 	}
