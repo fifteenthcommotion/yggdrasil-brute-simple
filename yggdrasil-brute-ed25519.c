@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
 
 	requestedtime = atoi(argv[1]);
 	if (requestedtime < 0) requestedtime = 0;
-	printf("Searching for yggdrasil keys (this will take slightly longer than %ld seconds)\n", requestedtime);
+	printf("Searching for yggdrasil ed25519 keys (this will take slightly longer than %ld seconds)\n", requestedtime);
 
 	randombytes_buf(seed, 32);
 
@@ -121,9 +121,12 @@ int main(int argc, char **argv) {
 	endcount: ;
 
 	printf("Number of leading ones: %d\n", ones);
-	printf("Seed: ");
+	printf("Secret (seed + public): ");
 	for (i = 0; i < 32; ++i) {
 		printf("%02x", bestseed[i]);
+	}
+	for (i = 0; i < 32; ++i) {
+		printf("%02x", bestpk[i]);
 	}
 	printf("\nPublic: ");
 	for (i = 0; i < 32; ++i) {

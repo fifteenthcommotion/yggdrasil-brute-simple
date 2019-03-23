@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
 
 	requestedtime = atoi(argv[1]);
 	if (requestedtime < 0) requestedtime = 0;
-	printf("Searching for yggdrasil keys (this will take slightly longer than %ld seconds)\n", requestedtime);
+	printf("Searching for yggdrasil curve25519 keys (this will take slightly longer than %ld seconds)\n", requestedtime);
 
 	randombytes_buf(sk, 32);
 	sk[0] &= 248;
