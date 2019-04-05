@@ -1,4 +1,6 @@
-all: yggdrasil-brute-curve25519 yggdrasil-brute-ed25519
+.PHONY: all
+
+all: yggdrasil-brute-curve25519 yggdrasil-brute-ed25519 yggdrasil-brute-multi-curve25519
 
 yggdrasil-brute-curve25519: yggdrasil-brute-curve25519.c
 	gcc -O3 -o yggdrasil-brute-curve25519 -lsodium yggdrasil-brute-curve25519.c
