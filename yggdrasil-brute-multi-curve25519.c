@@ -82,26 +82,41 @@ void merge(unsigned char sklist[NUMKEYS][32],
 	int i;
 	int l = 0;
 	int r = 0;
+	int offset = 0;
 
 	pthread_mutex_lock(&mergelock);
-	for (i = 0; i < NUMKEYS*2; ++i) {
-		if (r == NUMKEYS || memcmp(hashlist[l], besthashlist[r], 64) < 0) {
+	for (i = 0; i+offset < NUMKEYS*2; ++i) {
+		if (memcmp(hashlist[l], besthashlist[r], 64) < 0 && l < NUMKEYS) {
 			/* local hashlist is smaller, insert element from local */
 			memcpy(bigsklist[i], sklist[l], 32);
 			memcpy(bigpklist[i], pklist[l], 32);
 			memcpy(bighashlist[i], hashlist[l++], 64);
-		} else {
+		} else if (memcmp(hashlist[l], besthashlist[r], 64) > 0 && r < NUMKEYS) {
 			/* global hashlist is smaller, insert element from global */
 			memcpy(bigsklist[i], bestsklist[r], 32);
 			memcpy(bigpklist[i], bestpklist[r], 32);
 			memcpy(bighashlist[i], besthashlist[r++], 64);
+		} else {
+			/* they are equal */
+			if (r < l) {
+				memcpy(bigsklist[i], bestsklist[r], 32);
+				memcpy(bigpklist[i], bestpklist[r], 32);
+				memcpy(bighashlist[i], besthashlist[r], 64);
+			} else {
+				memcpy(bigsklist[i], sklist[l], 32);
+				memcpy(bigpklist[i], pklist[l], 32);
+				memcpy(bighashlist[i], hashlist[l], 64);
+			}
+			
+			++l; ++r;
+			++offset;
 		}
 	}
 	for (i = 0; i < NUMKEYS; ++i) {
 		/* copy over largest of sorted list to global */
-		memcpy(bestsklist[i], bigsklist[NUMKEYS+i], 32);
-		memcpy(bestpklist[i], bigpklist[NUMKEYS+i], 32);
-		memcpy(besthashlist[i], bighashlist[NUMKEYS+i], 64);
+		memcpy(bestsklist[i], bigsklist[NUMKEYS+i-offset], 32);
+		memcpy(bestpklist[i], bigpklist[NUMKEYS+i-offset], 32);
+		memcpy(besthashlist[i], bighashlist[NUMKEYS+i-offset], 64);
 	}
 	pthread_mutex_unlock(&mergelock);
 }
@@ -193,7 +208,8 @@ int main(int argc, char **argv) {
 
 	if (requestedtime < 0) requestedtime = 0;
 	if (numthreads <= 0) numthreads = 1;
-	fprintf(stderr, "Searching for yggdrasil curve25519 keys (this will take slightly longer than %ld seconds)\n", requestedtime);
+	fprintf(stderr, "Warning, output is unstable and the implementation seems buggy\n");
+	fprintf(stderr, "Searching for yggdrasil curve25519 keys (this will take up to a minute longer than %ld seconds)\n", requestedtime);
 	fprintf(stderr, "Spinning up %d threads\n", numthreads);
 
 	pthread_t threads[numthreads];
