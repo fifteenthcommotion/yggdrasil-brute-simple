@@ -26,7 +26,7 @@ time_t requestedtime;
 void zero_lists(unsigned char sklist[NUMKEYS][32],
 	unsigned char pklist[NUMKEYS][32],
 	unsigned char hashlist[NUMKEYS][64]) {
-	
+
 	int i;
 	int j;
 	for (i = 0; i < NUMKEYS; ++i) {
@@ -55,7 +55,7 @@ void make_addr(unsigned char addr[32], unsigned char hash[64]) {
 		}
 	}
 	endcount: ;
-	
+
 	addr[0] = 2;
 	addr[1] = ones;
 
@@ -78,7 +78,7 @@ void merge(unsigned char sklist[NUMKEYS][32],
 	unsigned char bigsklist[NUMKEYS*2][32];
 	unsigned char bigpklist[NUMKEYS*2][32];
 	unsigned char bighashlist[NUMKEYS*2][64];
-	
+
 	int i;
 	int l = 0;
 	int r = 0;
