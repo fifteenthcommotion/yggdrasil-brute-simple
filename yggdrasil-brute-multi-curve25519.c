@@ -107,7 +107,7 @@ void merge(unsigned char sklist[NUMKEYS][32],
 				memcpy(bigpklist[i], pklist[l], 32);
 				memcpy(bighashlist[i], hashlist[l], 64);
 			}
-			
+
 			++l; ++r;
 			++offset;
 		}
