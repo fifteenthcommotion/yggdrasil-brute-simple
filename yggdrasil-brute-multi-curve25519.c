@@ -86,12 +86,12 @@ void merge(unsigned char sklist[NUMKEYS][32],
 
 	pthread_mutex_lock(&mergelock);
 	for (i = 0; i+offset < NUMKEYS*2; ++i) {
-		if (memcmp(hashlist[l], besthashlist[r], 64) < 0 && l < NUMKEYS) {
+		if (r >= NUMKEYS || memcmp(hashlist[l], besthashlist[r], 64) < 0) {
 			/* local hashlist is smaller, insert element from local */
 			memcpy(bigsklist[i], sklist[l], 32);
 			memcpy(bigpklist[i], pklist[l], 32);
 			memcpy(bighashlist[i], hashlist[l++], 64);
-		} else if (memcmp(hashlist[l], besthashlist[r], 64) > 0 && r < NUMKEYS) {
+		} else if (l >= NUMKEYS || memcmp(hashlist[l], besthashlist[r], 64) > 0) {
 			/* global hashlist is smaller, insert element from global */
 			memcpy(bigsklist[i], bestsklist[r], 32);
 			memcpy(bigpklist[i], bestpklist[r], 32);
