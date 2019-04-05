@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 
 
 	if (argc != 2) {
-		printf("usage: ./yggdrasil-brute-curve25519 [seconds]\n");
+		printf("usage: ./yggdrasil-brute-curve25519 <seconds>\n");
 		return 1;
 	}
 
