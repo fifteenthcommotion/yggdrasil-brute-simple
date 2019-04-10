@@ -10,18 +10,8 @@ thread:
 #include <string.h> /* memcpy */
 #include <stdlib.h> /* atoi */
 #include <time.h>
-#include <pthread.h>
 
 #define NUMKEYS 10
-
-unsigned char bestsklist[NUMKEYS][32];
-unsigned char bestpklist[NUMKEYS][32];
-unsigned char besthashlist[NUMKEYS][64];
-
-pthread_mutex_t mergelock;
-
-time_t starttime;
-time_t requestedtime;
 
 void zero_lists(unsigned char sklist[NUMKEYS][32],
 	unsigned char pklist[NUMKEYS][32],
@@ -70,78 +60,54 @@ void make_addr(unsigned char addr[32], unsigned char hash[64]) {
 
 
 
-void merge(unsigned char sklist[NUMKEYS][32],
-	unsigned char pklist[NUMKEYS][32],
-	unsigned char hashlist[NUMKEYS][64]) {
-
-	/* big merged sorted lists */
-	unsigned char bigsklist[NUMKEYS*2][32];
-	unsigned char bigpklist[NUMKEYS*2][32];
-	unsigned char bighashlist[NUMKEYS*2][64];
-
-	int i;
-	int l = 0;
-	int r = 0;
-	int offset = 0;
-
-	pthread_mutex_lock(&mergelock);
-	for (i = 0; i+offset < NUMKEYS*2; ++i) {
-		if (r >= NUMKEYS || memcmp(hashlist[l], besthashlist[r], 64) < 0) {
-			/* local hashlist is smaller, insert element from local */
-			memcpy(bigsklist[i], sklist[l], 32);
-			memcpy(bigpklist[i], pklist[l], 32);
-			memcpy(bighashlist[i], hashlist[l++], 64);
-		} else if (l >= NUMKEYS || memcmp(hashlist[l], besthashlist[r], 64) > 0) {
-			/* global hashlist is smaller, insert element from global */
-			memcpy(bigsklist[i], bestsklist[r], 32);
-			memcpy(bigpklist[i], bestpklist[r], 32);
-			memcpy(bighashlist[i], besthashlist[r++], 64);
-		} else {
-			/* they are equal */
-			if (r < l) {
-				memcpy(bigsklist[i], bestsklist[r], 32);
-				memcpy(bigpklist[i], bestpklist[r], 32);
-				memcpy(bighashlist[i], besthashlist[r], 64);
-			} else {
-				memcpy(bigsklist[i], sklist[l], 32);
-				memcpy(bigpklist[i], pklist[l], 32);
-				memcpy(bighashlist[i], hashlist[l], 64);
-			}
-
-			++l; ++r;
-			++offset;
-		}
-	}
-	for (i = 0; i < NUMKEYS; ++i) {
-		/* copy over largest of sorted list to global */
-		memcpy(bestsklist[i], bigsklist[NUMKEYS+i-offset], 32);
-		memcpy(bestpklist[i], bigpklist[NUMKEYS+i-offset], 32);
-		memcpy(besthashlist[i], bighashlist[NUMKEYS+i-offset], 64);
-	}
-	pthread_mutex_unlock(&mergelock);
+inline void seed(unsigned char sk[32]) {
+	randombytes_buf(sk, 32);
+	sk[0] &= 248;
+	sk[31] &= 127;
+	sk[31] |= 64;
 }
 
-void* search(void *a) {
-	unsigned char localsklist[NUMKEYS][32];
-	unsigned char localpklist[NUMKEYS][32];
-	unsigned char localhashlist[NUMKEYS][64];
+	
+
+int main(int argc, char **argv) {
+	int numthreads;
+	int i;
+	int j;
+	unsigned char addr[16];
+	time_t starttime;
+	time_t requestedtime;
+
+	unsigned char bestsklist[NUMKEYS][32];
+	unsigned char bestpklist[NUMKEYS][32];
+	unsigned char besthashlist[NUMKEYS][64];
 
 	unsigned char sk[32];
 	unsigned char pk[32];
 	unsigned char hash[64];
 
 	unsigned int runs = 0;
-	int i;
-	int j;
 	int where;
 
-	zero_lists(localsklist, localpklist, localhashlist);
 
-	seed:
-	randombytes_buf(sk, 32);
-	sk[0] &= 248;
-	sk[31] &= 127;
-	sk[31] |= 64;
+	if (argc != 2) {
+		fprintf(stderr, "usage: ./yggdrasil-brute-multi-curve25519 <seconds>\n");
+		return 1;
+	}
+
+	if (sodium_init() < 0) {
+		/* panic! the library couldn't be initialized, it is not safe to use */
+		printf("sodium init failed!\n");
+		return 1;
+	}
+
+	starttime = time(NULL);
+	requestedtime = atoi(argv[1]);
+
+	if (requestedtime < 0) requestedtime = 0;
+	fprintf(stderr, "Searching for yggdrasil curve25519 keys (this will take up to a minute longer than %ld seconds)\n", requestedtime);
+
+	zero_lists(bestsklist, bestpklist, besthashlist);
+	seed(sk);
 
 	goto beginloop;
 	while (time(NULL) - starttime < requestedtime || runs < NUMKEYS) {
@@ -152,77 +118,30 @@ void* search(void *a) {
 			++runs;
 			if (crypto_scalarmult_curve25519_base(pk, sk) != 0) {
 				printf("scalarmult to create pub failed!\n");
-				return NULL;
+				return 1;
 			}
 			crypto_hash_sha512(hash, pk, 32);
 
 			/* insert into local list of good key */
 			where = -1;
 			for (j = 0; j < NUMKEYS; ++j) {
-				if (memcmp(hash, localhashlist[j], 64) > 0) ++where;
+				if (memcmp(hash, besthashlist[j], 64) > 0) ++where;
 				else break;
 			}
 			if (where >= 0) {
 				for (j = 0; j < where; ++j) {
-					memcpy(localsklist[j], localsklist[j+1], 32);
-					memcpy(localpklist[j], localpklist[j+1], 32);
-					memcpy(localhashlist[j], localhashlist[j+1], 64);
+					memcpy(bestsklist[j], bestsklist[j+1], 32);
+					memcpy(bestpklist[j], bestpklist[j+1], 32);
+					memcpy(besthashlist[j], besthashlist[j+1], 64);
 				}
-				memcpy(localsklist[where], sk, 32);
-				memcpy(localpklist[where], pk, 32);
-				memcpy(localhashlist[where], hash, 64);
+				memcpy(bestsklist[where], sk, 32);
+				memcpy(bestpklist[where], pk, 32);
+				memcpy(besthashlist[where], hash, 64);
 
-				goto seed;
+				seed(sk);
 			}
 			for (j = 1; j < 31; ++j) if (++sk[j]) break;
 		}
-		merge(localsklist, localpklist, localhashlist); /* handle mutex inside function */
-	}
-	return NULL;
-}
-
-int main(int argc, char **argv) {
-	int numthreads;
-	int i;
-	int j;
-	unsigned char addr[16];
-
-	if (argc != 3) {
-		fprintf(stderr, "usage: ./yggdrasil-brute-multi-curve25519 <seconds> <threads>\n");
-		return 1;
-	}
-
-	if (sodium_init() < 0) {
-		/* panic! the library couldn't be initialized, it is not safe to use */
-		printf("sodium init failed!\n");
-		return 1;
-	}
-	if (pthread_mutex_init(&mergelock, NULL) != 0) {
-		printf("pthread mutex init failed!\n");
-		return 1;
-	}
-
-	starttime = time(NULL);
-	requestedtime = atoi(argv[1]);
-	numthreads = atoi(argv[2]);
-
-	if (requestedtime < 0) requestedtime = 0;
-	if (numthreads <= 0) numthreads = 1;
-	fprintf(stderr, "Warning, output is unstable and the implementation seems buggy\n");
-	fprintf(stderr, "Searching for yggdrasil curve25519 keys (this will take up to a minute longer than %ld seconds)\n", requestedtime);
-	fprintf(stderr, "Spinning up %d threads\n", numthreads);
-
-	pthread_t threads[numthreads];
-	pthread_attr_t attr;
-	zero_lists(bestsklist, bestpklist, besthashlist);
-
-	pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-	for (i = 0; i < numthreads; ++i) {
-		pthread_create(&threads[i], &attr, search, NULL);
-	}
-	for (i = 0; i < numthreads; ++i) {
-		pthread_join(threads[i], NULL);
 	}
 
 
