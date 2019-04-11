@@ -145,16 +145,14 @@ int main(int argc, char **argv) {
 	}
 
 
-	fprintf(stderr, "-----------------------------secret----------------------------- -----------------------------public----------------------------- --------------addr-------------- --------------------------------------------------------------hash-------------------------------------------------------------- \n");
+	fprintf(stderr, "--------------addr-------------- -----------------------------secret----------------------------- -----------------------------public-----------------------------\n");
 	for (i = 0; i < NUMKEYS; ++i) {
 		make_addr(addr, besthashlist[i]);
+		for (j = 0; j < 16; ++j) printf("%02x", addr[j]);
+		printf(" ");
 		for (j = 0; j < 32; ++j) printf("%02x", bestsklist[i][j]);
 		printf(" ");
 		for (j = 0; j < 32; ++j) printf("%02x", bestpklist[i][j]);
-		printf(" ");
-		for (j = 0; j < 16; ++j) printf("%02x", addr[j]);
-		printf(" ");
-		for (j = 0; j < 64; ++j) printf("%02x", besthashlist[i][j]);
 		printf("\n");
 	}
 
