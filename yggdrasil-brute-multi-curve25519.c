@@ -156,6 +156,9 @@ int main(int argc, char **argv) {
 		printf("\n");
 	}
 
+	sodium_memzero(bestsklist, NUMKEYS * 32);
+	sodium_memzero(sk, 32);
+
 	return 0;
 }
 
