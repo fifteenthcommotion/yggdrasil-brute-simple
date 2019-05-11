@@ -20,7 +20,7 @@ if besthash:
 	besthash = hash
 */
 
-#include "yggdrasil-brute.h" /* NUMKEYS */
+#include "yggdrasil-brute.h"
 
 
 int main(int argc, char **argv) {
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
 	}
 
 
-	fprintf(stderr, "!! Secret key is seed concatenated with public !!\n"); 
+	fprintf(stderr, "!! Secret key is seed concatenated with public !!\n");
 	fprintf(stderr, "---hash--- ------------------------------seed------------------------------ -----------------------------public-----------------------------\n");
 	for (i = 0; i < NUMKEYS; ++i) {
 		for (j = 0; j < 5; ++j) printf("%02x", besthashlist[i][j]);

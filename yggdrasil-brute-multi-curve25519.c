@@ -13,7 +13,7 @@ if besthash:
 	besthash = hash
 */
 
-#include "yggdrasil-brute.h" /* make_addr, NUMKEYS */
+#include "yggdrasil-brute.h"
 
 
 void seed(unsigned char sk[32]) {
