@@ -1,73 +1,28 @@
 /*
-thread:
-	maintain local bestlist
-	merge into global bestlist
+sk: 32 random bytes
+sk[0] &= 248;
+sk[31] &= 127;
+sk[31] |= 64;
+
+increment sk
+pk = curve25519_scalarmult_base(mysecret)
+hash = sha512(pk)
+
+if besthash:
+	bestsk = sk
+	besthash = hash
 */
 
-
-#include <sodium.h>
-#include <stdio.h>  /* printf */
-#include <string.h> /* memcpy */
-#include <stdlib.h> /* atoi */
-#include <time.h>
-
-#define NUMKEYS 10
-
-void zero_lists(unsigned char sklist[NUMKEYS][32],
-	unsigned char pklist[NUMKEYS][32],
-	unsigned char hashlist[NUMKEYS][64]) {
-
-	int i;
-	int j;
-	for (i = 0; i < NUMKEYS; ++i) {
-		for (j = 0; j < 32; ++j) {
-			sklist[i][j] = 0;
-			pklist[i][j] = 0;
-			hashlist[i][j] = 0;
-			hashlist[i][32+j] = 0;
-		}
-	}
-}
-
-void make_addr(unsigned char addr[32], unsigned char hash[64]) {
-	int i;
-	int offset;
-	unsigned char mask;
-	unsigned char c;
-	int ones = 0;
-	for (i = 0; i < 64; ++i) {
-		mask = 128;
-		c = hash[i];
-		while (mask) {
-			if (c & mask) ++ones;
-			else goto endcount;
-			mask >>= 1;
-		}
-	}
-	endcount: ;
-
-	addr[0] = 2;
-	addr[1] = ones;
-
-	offset = ones + 1;
-	for (i = 0; i < 14; ++i) {
-		c = hash[offset/8] << (offset%8);
-		c |= hash[offset/8 + 1] >> (8 - offset%8);
-		addr[i + 2] = c;
-		offset += 8;
-	}
-}
+#include "yggdrasil-brute.h" /* make_addr, NUMKEYS */
 
 
-
-inline void seed(unsigned char sk[32]) {
+void seed(unsigned char sk[32]) {
 	randombytes_buf(sk, 32);
 	sk[0] &= 248;
 	sk[31] &= 127;
 	sk[31] |= 64;
 }
 
-	
 
 int main(int argc, char **argv) {
 	int numthreads;
@@ -104,9 +59,11 @@ int main(int argc, char **argv) {
 	requestedtime = atoi(argv[1]);
 
 	if (requestedtime < 0) requestedtime = 0;
-	fprintf(stderr, "Searching for yggdrasil curve25519 keys (this will take up to a minute longer than %ld seconds)\n", requestedtime);
+	fprintf(stderr, "Searching for yggdrasil curve25519 keys (this will take slightly longer than %ld seconds)\n", requestedtime);
 
-	zero_lists(bestsklist, bestpklist, besthashlist);
+	memset(bestsklist, 0, NUMKEYS * 32);
+	memset(bestpklist, 0, NUMKEYS * 32);
+	memset(besthashlist, 0, NUMKEYS * 64);
 	seed(sk);
 
 	goto beginloop;
@@ -122,28 +79,17 @@ int main(int argc, char **argv) {
 			}
 			crypto_hash_sha512(hash, pk, 32);
 
-			/* insert into local list of good key */
-			where = -1;
-			for (j = 0; j < NUMKEYS; ++j) {
-				if (memcmp(hash, besthashlist[j], 64) > 0) ++where;
-				else break;
-			}
+			where = find_where(hash, besthashlist);
 			if (where >= 0) {
-				for (j = 0; j < where; ++j) {
-					memcpy(bestsklist[j], bestsklist[j+1], 32);
-					memcpy(bestpklist[j], bestpklist[j+1], 32);
-					memcpy(besthashlist[j], besthashlist[j+1], 64);
-				}
-				memcpy(bestsklist[where], sk, 32);
-				memcpy(bestpklist[where], pk, 32);
-				memcpy(besthashlist[where], hash, 64);
+				insert_32(bestsklist, sk, where);
+				insert_32(bestpklist, pk, where);
+				insert_64(besthashlist, hash, where);
 
 				seed(sk);
 			}
 			for (j = 1; j < 31; ++j) if (++sk[j]) break;
 		}
 	}
-
 
 	fprintf(stderr, "--------------addr-------------- -----------------------------secret----------------------------- -----------------------------public-----------------------------\n");
 	for (i = 0; i < NUMKEYS; ++i) {
