@@ -61,16 +61,14 @@ int main(int argc, char **argv) {
 	if (requestedtime < 0) requestedtime = 0;
 	fprintf(stderr, "Searching for yggdrasil curve25519 keys (this will take slightly longer than %ld seconds)\n", requestedtime);
 
-	memset(bestsklist, 0, NUMKEYS * 32);
-	memset(bestpklist, 0, NUMKEYS * 32);
-	memset(besthashlist, 0, NUMKEYS * 64);
+	sodium_memzero(bestsklist, NUMKEYS * 32);
+	sodium_memzero(bestpklist, NUMKEYS * 32);
+	sodium_memzero(besthashlist, NUMKEYS * 64);
 	seed(sk);
 
-	goto beginloop;
-	while (time(NULL) - starttime < requestedtime || runs < NUMKEYS) {
+	do {
 		/* generate pubkey, hash, compare, increment secret.
 		 * this loop should take 4 seconds on modern hardware */
-		beginloop:
 		for (i = 0; i < (1 << 16); ++i) {
 			++runs;
 			if (crypto_scalarmult_curve25519_base(pk, sk) != 0) {
@@ -89,7 +87,7 @@ int main(int argc, char **argv) {
 			}
 			for (j = 1; j < 31; ++j) if (++sk[j]) break;
 		}
-	}
+	} while (time(NULL) - starttime < requestedtime || runs < NUMKEYS);
 
 	fprintf(stderr, "--------------addr-------------- -----------------------------secret----------------------------- -----------------------------public-----------------------------\n");
 	for (i = 0; i < NUMKEYS; ++i) {

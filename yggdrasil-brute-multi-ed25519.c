@@ -60,15 +60,13 @@ int main(int argc, char **argv) {
 	if (requestedtime < 0) requestedtime = 0;
 	fprintf(stderr, "Searching for yggdrasil ed25519 keys (this will take slightly longer than %ld seconds)\n", requestedtime);
 
-	memset(bestsklist, 0, NUMKEYS * 64);
-	memset(besthashlist, 0, NUMKEYS * 64);
+	sodium_memzero(bestsklist, NUMKEYS * 64);
+	sodium_memzero(besthashlist, NUMKEYS * 64);
 	randombytes_buf(seed, 32);
 
-	goto beginloop;
-	while (time(NULL) - starttime < requestedtime || runs < NUMKEYS) {
+	do {
 		/* generate pubkey, hash, compare, increment secret.
 		 * this loop should take 4 seconds on modern hardware */
-		beginloop:
 		for (i = 0; i < (1 << 17); ++i) {
 			++runs;
 			crypto_hash_sha512(sk, seed, 32);
@@ -90,7 +88,7 @@ int main(int argc, char **argv) {
 			}
 			for (j = 1; j < 31; ++j) if (++seed[j]) break;
 		}
-	}
+	} while (time(NULL) - starttime < requestedtime || runs < NUMKEYS);
 
 
 	fprintf(stderr, "!! Secret key is seed concatenated with public !!\n");

@@ -6,7 +6,7 @@ int find_where(unsigned char hash[64], unsigned char besthashlist[NUMKEYS][64]) 
 	int where = -1;
 	for (j = 0; j < NUMKEYS; ++j) {
 		if (memcmp(hash, besthashlist[j], 64) > 0) ++where;
-			else break;
+		else break;
 	}
 	return where;
 }
@@ -34,16 +34,20 @@ void make_addr(unsigned char addr[32], unsigned char hash[64]) {
 	unsigned char mask;
 	unsigned char c;
 	int ones = 0;
-	for (i = 0; i < 64; ++i) {
+	unsigned char br = 0; /* false */
+	for (i = 0; i < 64 && !br; ++i) {
 		mask = 128;
 		c = hash[i];
 		while (mask) {
-			if (c & mask) ++ones;
-			else goto endcount;
+			if (c & mask) {
+				++ones;
+			} else {
+				br = 1; /* true */
+				break;
+			}
 			mask >>= 1;
 		}
 	}
-	endcount: ;
 
 	addr[0] = 2;
 	addr[1] = ones;
