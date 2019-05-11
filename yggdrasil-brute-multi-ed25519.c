@@ -24,10 +24,8 @@ if besthash:
 
 
 int main(int argc, char **argv) {
-	int numthreads;
 	int i;
 	int j;
-	unsigned char addr[16];
 	time_t starttime;
 	time_t requestedtime;
 

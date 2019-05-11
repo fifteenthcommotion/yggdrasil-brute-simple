@@ -25,7 +25,6 @@ void seed(unsigned char sk[32]) {
 
 
 int main(int argc, char **argv) {
-	int numthreads;
 	int i;
 	int j;
 	unsigned char addr[16];
